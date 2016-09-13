@@ -1,0 +1,467 @@
+<!--/*
+ * @support
+ * http://www.opensourcetechnologies.com/contactus.html
+ * sales@opensourcetechnologies.com
+* */-->
+<modification>
+	<id><![CDATA[You Save]]></id>
+	<version><![CDATA[1.0.0.1]]></version>
+	<vqmver><![CDATA[2.x]]></vqmver>
+	<author><![CDATA[OST]]></author>
+
+<!-- For Product detail page -->		
+	<file name="catalog/language/english/product/product.php">
+		<operation>
+			<search position="after"><![CDATA[$_['text_year']                = 'year';]]></search>
+			<add><![CDATA[$_['text_yousave']                = 'You Save';
+			$_['text_peritem']                = 'per item';
+			]]></add>
+		</operation>
+	</file>
+		
+	<file name="catalog/controller/product/product.php">
+		<operation>
+			<search position="before"><![CDATA[$data['text_select'] = $this->language->get('text_select');]]></search>
+			<add><![CDATA[$data['text_yousave'] = $this->language->get('text_yousave');
+			$data['text_peritem'] = $this->language->get('text_peritem');]]></add>
+		</operation>
+		
+<!-- In Case of Special -->
+		<operation>
+			<search position="after"><![CDATA[$data['special'] = $this->currency->format($this->tax->calculate($product_info['special'], $product_info['tax_class_id'], $this->config->get('config_tax')));]]></search>
+			<add><![CDATA[$data['yousave'] = $this->currency->format($this->tax->calculate($product_info['price']-$product_info['special'], $product_info['tax_class_id'], $this->config->get('config_tax')));
+			if($product_info['price'] == $product_info['special']){	
+				$data['saving'] = 0;			
+				$data['yousave'] = false;
+			} else {
+				$data['saving']  = $product_info['price'] - $product_info['special'];
+			}	
+				
+			$data['yousavepercent'] = round(($product_info['price']-$product_info['special'])*100/$product_info['price'],0);]]></add>
+		</operation>
+		
+<!-- In Case of Discount -->
+		<operation>
+			<search position="after"><![CDATA['price'    => $this->currency->format($this->tax->calculate($discount['price'], $product_info['tax_class_id'], $this->config->get('config_tax')))]]></search>
+			<add><![CDATA[,'saveprice'    => $this->currency->format($this->tax->calculate($product_info['price']-$discount['price'], $product_info['tax_class_id'], $this->config->get('config_tax')))]]></add>
+		</operation>		
+		
+
+				
+	</file>
+
+	<file name="catalog/view/theme/default/template/product/product.tpl">
+<!-- In Case of Special -->		
+		<operation>
+			<search position="after"><![CDATA[<div id="product">]]></search>
+			<add><![CDATA[<?php if(isset($yousave)) {?>
+				<input type="hidden" name="yousave" id="input-yousave" value="<?php echo $saving; ?>" ></input>
+				 <span class="yousave" style="color:red"><?php echo $text_yousave; ?> <?php echo $yousave . ' (' . $yousavepercent . '%)'; ?> <?php echo $text_peritem; ?></span>
+			<?php } ?>]]></add>
+		</operation>
+		
+<!-- In Case of Discount -->		
+		<operation>
+<search position="after"><![CDATA[<li><?php echo $discount['quantity']; ?><?php echo $text_discount; ?><?php echo $discount['price']; ?></li>]]></search>
+<add><![CDATA[<li><span class="yousave" style="color:red"><?php echo $text_yousave; ?> <?php echo $discount['saveprice']; ?> <?php echo $text_peritem; ?></li>]]></add>
+		</operation>
+				
+	</file>
+
+<!-- For Cart Detail view page -->	
+<!-- Showing You save on checkout cart view -->
+	<file name="catalog/language/english/checkout/cart.php">
+		<operation>
+			<search position="after"><![CDATA[$_['text_payment_cancel']      = '%s every %d %s(s) until canceled';]]></search>
+			<add><![CDATA[$_['text_yousave']                = 'You Save';
+			$_['text_peritem']                = 'per item';
+			$_['text_items_yousave']               = '%s item(s) - %s <br> You Save - %s';
+			]]></add>
+		</operation>
+
+	</file>
+	
+	<!-- Send saving to cart view in Case of Special -->
+	<file name="catalog/controller/checkout/cart.php">
+		
+<!-- get yousave text-->				
+		<operation>
+			<search position="after"><![CDATA[$data['heading_title'] = $this->language->get('heading_title');]]></search>
+			<add><![CDATA[$data['text_yousave'] = $this->language->get('text_yousave');
+			$data['text_peritem'] = $this->language->get('text_peritem');
+			$data['text_items_yousave'] = $this->language->get('text_items_yousave');]]></add>
+		</operation>
+		
+<!-- get yousave value-->				
+		<operation>
+			<search position="before"><![CDATA[if (isset($this->request->post['option'])) {]]></search>
+			<add><![CDATA[ $yousave = $product_info['price'] - $product_info['special']; ]]></add>
+		</operation>
+
+<!-- Send yousavetotal to header cart -->
+		<operation>
+			<search position="replace" index="1"><![CDATA[$json['total'] = sprintf($this->language->get('text_items'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0), $this->currency->format($total));]]></search>
+			<add><![CDATA[
+			$totalyousave = $this->cart->getTotalYousave();
+		if(isset($totalyousave) && $totalyousave > 0) {
+			$totalyousave = $this->currency->format($totalyousave);
+				$json['total'] = sprintf($this->language->get('text_items_yousave'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0), $this->currency->format($total), $totalyousave);
+		} else {
+			$json['total'] = sprintf($this->language->get('text_items'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0), $this->currency->format($total));
+		}		]]></add>
+		</operation>	
+
+<!-- get yousave value in array for cart view-->				
+		<operation>
+			<search position="after"><![CDATA['cart_id'   => $product['cart_id'],]]></search>
+			<add><![CDATA['yousave'   => $this->currency->format($product['yousave']),
+			'yousavetotal'   => $this->currency->format($product['yousavetotal']),
+			]]></add>
+		</operation>
+		
+<!-- get Total yousave value for cart view-->				
+		<operation>
+			<search position="before" index="1"><![CDATA[$data['continue'] = $this->url->link('common/home');]]></search>
+			<add><![CDATA[$data['TotalYousave'] = $this->currency->format($this->cart->getTotalYousave());
+			$json['TotalYousave'] = $data['TotalYousave'];]]></add>
+		</operation>							
+				
+	</file>
+	
+<!-- Send saving to cart library in Case of Special -->
+	<file name="system/library/cart.php">
+<!-- Add yousave in database -->
+		<operation>
+			<search position="after"><![CDATA[public function add($product_id, $quantity = 1, $option = array(), $recurring_id = 0) {]]></search>
+			<add><![CDATA[
+	// Product Price
+	$product_price_query = $this->db->query("SELECT price FROM " . DB_PREFIX . "product WHERE product_id = '" . (int)$product_id . "' ");
+			if ($product_price_query->num_rows) {
+				  $productprice = (int)$product_price_query->row['price'];
+			} else {
+					$productprice = 0;
+			}
+			
+	
+		 $cart_quantity = 0;
+		$cart_query = $this->db->query("SELECT * FROM " . DB_PREFIX . "cart WHERE product_id = '" . (int)$product_id . "' AND customer_id = '" . (int)$this->customer->getId() . "' AND session_id = '" . $this->db->escape($this->session->getId()) . "'");
+
+			if ($cart_query->num_rows) {
+				  $cart_quantity = (int)$cart_query->row['quantity'] + (int)$quantity;
+			}  else {
+				$cart_quantity = (int)$quantity;
+			}
+	
+	// Product Discounts
+	$product_discount_query = $this->db->query("SELECT price FROM " . DB_PREFIX . "product_discount WHERE product_id = '" . (int)$product_id . "' AND customer_group_id = '" . (int)$this->config->get('config_customer_group_id') . "' AND quantity <= '" . (int)$cart_quantity . "' AND ((date_start = '0000-00-00' OR date_start < NOW()) AND (date_end = '0000-00-00' OR date_end > NOW())) ");
+
+			if ($product_discount_query->num_rows) {
+				  $discountprice = (int)$product_discount_query->row['price'];
+			} else {
+				 $discountprice = false;
+			}
+
+	// Product Specials
+	$product_special_query = $this->db->query("SELECT price FROM " . DB_PREFIX . "product_special WHERE product_id = '" . (int)$product_id . "' AND customer_group_id = '" . (int)$this->config->get('config_customer_group_id') . "' AND ((date_start = '0000-00-00' OR date_start < NOW()) AND (date_end = '0000-00-00' OR date_end > NOW())) ORDER BY priority ASC, price ASC LIMIT 1");
+
+		if ($product_special_query->num_rows) {
+			$specialprice = $product_special_query->row['price'];
+		} else {
+			$specialprice = false;
+		}
+				
+	if(isset($specialprice) && ($specialprice > 0)){
+		  $yousave = $cart_quantity * ($productprice - $specialprice);
+	} elseif(isset($discountprice) && ($discountprice > 0)){
+		  $yousave = $productprice - $discountprice;
+	} else {
+		  $yousave = 0;
+	}]]></add>
+		</operation>		
+				
+<!-- Insert yousave value to cart > insert table-->				
+		<operation>
+			<search position="replace"><![CDATA[, quantity = '" . (int)$quantity . "', date_added = NOW()]]></search>
+			<add><![CDATA[, quantity = '" . (int)$quantity . "', date_added = NOW(), yousave = '" . $yousave . "']]></add>
+		</operation>
+
+<!-- Insert yousave value to cart > add > update table -->
+		<operation>
+			<search position="replace"><![CDATA[cart SET quantity = (quantity + " . (int)$quantity . ")]]></search>
+			<add><![CDATA[cart SET quantity = (quantity + " . (int)$quantity . ") , yousave =  '" . $yousave . "']]></add>
+		</operation>
+		
+<!--mohit 26-02-16 4:00 PM Update yousave value to cart > update -->
+		<operation>
+			<search position="after"><![CDATA[public function update($cart_id, $quantity) {]]></search>
+			<add><![CDATA[	
+	// Product Price
+	$product_price_query = $this->db->query("SELECT p.price , p.product_id FROM " . DB_PREFIX . "product p INNER JOIN " . DB_PREFIX . "cart c ON p.product_id = c.product_id WHERE cart_id = '" . (int)$cart_id . "' ");
+			if ($product_price_query->num_rows) {
+				   $productprice = (int)$product_price_query->row['price'];
+				   $product_id = (int)$product_price_query->row['product_id'];
+			} else {
+					$productprice = 0;
+					$product_id = (int)$product_price_query->row['product_id'];
+			}
+			
+	
+	// Product Discounts
+	$product_discount_query = $this->db->query("SELECT price FROM " . DB_PREFIX . "product_discount WHERE product_id = '" . (int)$product_id . "' AND customer_group_id = '" . (int)$this->config->get('config_customer_group_id') . "' AND quantity <= '" . (int)$quantity . "' AND ((date_start = '0000-00-00' OR date_start < NOW()) AND (date_end = '0000-00-00' OR date_end > NOW())) ");
+
+			if ($product_discount_query->num_rows) {
+				  $discountprice = (int)$product_discount_query->row['price'];
+			} else {
+				 $discountprice = false;
+			}
+
+	// Product Specials
+	$product_special_query = $this->db->query("SELECT price FROM " . DB_PREFIX . "product_special WHERE product_id = '" . (int)$product_id . "' AND customer_group_id = '" . (int)$this->config->get('config_customer_group_id') . "' AND ((date_start = '0000-00-00' OR date_start < NOW()) AND (date_end = '0000-00-00' OR date_end > NOW())) ORDER BY priority ASC, price ASC LIMIT 1");
+
+		if ($product_special_query->num_rows) {
+			 $specialprice = $product_special_query->row['price'];
+		} else {
+			 $specialprice = false;
+		}
+				
+	if(isset($specialprice) && ($specialprice > 0)){
+		  $yousave = $quantity * ($productprice - $specialprice);
+	} elseif(isset($discountprice) && ($discountprice > 0)){
+		  $yousave = $productprice - $discountprice;
+	} else {
+		  $yousave = 0;
+	}]]></add>
+		</operation>
+		
+		<operation>
+			<search position="replace"><![CDATA[cart SET quantity = '" . (int)$quantity . "']]></search>
+			<add><![CDATA[cart SET quantity = '" . (int)$quantity . "' , yousave =  '" . $yousave . "']]></add>
+		</operation>		
+
+<!-- Get yousave and total yousave -->
+		<operation>
+			<search position="after"><![CDATA['cart_id'         => $cart['cart_id'],]]></search>
+			<add><![CDATA['yousave'         => $cart['yousave'],
+			'yousavetotal'           => $cart['yousave'],
+			]]></add>
+		</operation>
+
+<!-- Do Subtotal of yousave -->
+		<operation>
+			<search position="before"><![CDATA[public function getSubTotal() {]]></search>
+			<add><![CDATA[public function getTotalYousave() {
+		$yousavetotal = 0;
+
+		foreach ($this->getProducts() as $product) {
+			$yousavetotal += $product['yousavetotal'];
+		}
+
+		return $yousavetotal;
+	}]]></add>
+		</operation>		
+						
+	</file>
+	
+<!-- Showing on checkout cart view -->
+	<file name="catalog/view/theme/*/template/checkout/cart.tpl">
+<!-- Show Yousave Per Product-->
+		<operation>
+			<search position="after"><![CDATA[<td class="text-right"><?php echo $column_total; ?></td>]]></search>
+			<add><![CDATA[<td class="text-right"><?php echo $text_yousave; ?></td>]]></add>
+		</operation>
+		
+		<operation>
+			<search position="after"><![CDATA[<td class="text-right"><?php echo $product['total']; ?></td>]]></search>
+			<add><![CDATA[<td class="text-right"><?php
+				echo $product['yousave'];?></td>]]></add>
+		</operation>
+<!-- Show Total Yousave -->		
+		<operation>
+			<search position="before"><![CDATA[<?php foreach ($totals as $total) { ?>]]></search>
+			<add><![CDATA[<tr><td class="text-right"><strong><?php echo $text_yousave; ?></strong></td>
+					<td class="text-right"><?php echo $TotalYousave; ?></td></tr>]]></add>
+		</operation>				
+	</file>
+	
+<!-- For Common Cart in Header -->
+<!-- Showing You save on checkout cart view -->
+	<file name="catalog/language/english/common/cart.php">
+		<operation>
+			<search position="after"><![CDATA[$_['text_recurring'] = 'Payment Profile';]]></search>
+			<add><![CDATA[$_['text_yousave']                = 'You Save';
+			$_['text_peritem']                = 'per item';
+			$_['text_totalyousave']     = 'You Save - %s';
+			$_['text_items_yousave']               = '%s item(s) - %s <br> You Save - %s';
+			]]></add>
+		</operation>
+	</file>
+	
+<!-- Send Yousave to common cart controller -->
+	<file name="catalog/controller/common/cart.php">
+		
+<!-- get yousave text-->				
+		<operation>
+			<search position="before"><![CDATA[$data['text_empty'] = $this->language->get('text_empty');]]></search>
+			<add><![CDATA[$data['text_yousave'] = $this->language->get('text_yousave');
+			$data['text_peritem'] = $this->language->get('text_peritem');
+			$data['text_items_yousave'] = $this->language->get('text_items_yousave');]]></add>
+		</operation>
+		
+<!-- get yousave value in array for cart view-->				
+		<operation>
+			<search position="after"><![CDATA['cart_id'   => $product['cart_id'],]]></search>
+			<add><![CDATA['yousave'   => $product['yousave'],]]></add>
+		</operation>
+		
+<!-- get Total yousave value for cart view-->				
+		<operation>
+			<search position="before"><![CDATA[$data['cart'] = $this->url->link('checkout/cart');]]></search>
+			<add><![CDATA[$data['TotalYousavevalue'] = $this->cart->getTotalYousave();
+			$data['TotalYousave'] = $this->currency->format($data['TotalYousavevalue']);]]></add>
+		</operation>
+
+<!-- get Total yousave value for cart Header view-->				
+		<operation>
+			<search position="before"><![CDATA[$data['text_loading'] = $this->language->get('text_loading');]]></search>
+			<add><![CDATA[$data['text_totalyousave'] = sprintf($this->language->get('text_totalyousave'), $this->currency->format($this->cart->getTotalYousave()));]]></add>
+		</operation>
+		
+<!-- Add Header Cart value for cart Header view-->				
+		<operation>
+			<search position="before"><![CDATA[$data['text_loading'] = $this->language->get('text_loading');]]></search>
+			<add><![CDATA[$totalyousave = $this->currency->format($this->cart->getTotalYousave());
+			$data['text_items_yousave'] = sprintf($this->language->get('text_items_yousave'), $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0), $this->currency->format($total), $totalyousave);]]></add>
+		</operation>		
+						
+	</file>
+	
+<!-- Showing on cart Header view -->
+	<file name="catalog/view/theme/*/template/common/cart.tpl">
+		<operation>
+			<search position="replace"><![CDATA[<span id="cart-total"><?php echo $text_items; ?></span>]]></search>
+			<add><![CDATA[
+			<?php if(isset($TotalYousavevalue) && $TotalYousavevalue>0) { ?> 
+				<span id="cart-total"><?php echo $text_items_yousave; ?></span>
+			<?php } else { ?>	
+				<span id="cart-total"><?php echo $text_items; ?></span>
+			<?php } ?>
+			]]></add>
+		</operation>
+		
+		<operation>
+			<search position="after"><![CDATA[<table class="table table-bordered">]]></search>
+			<add><![CDATA[<tr><td class="text-right"><strong><?php echo $text_yousave; ?></strong></td>
+			<td class="text-right"><?php echo $TotalYousave; ?></td></tr>]]></add>
+		</operation>
+	</file>
+
+<!-- For Confirm Checkout Page-->
+<!-- Showing You save on checkout cart view -->
+	<file name="catalog/language/english/checkout/checkout.php">
+		<operation>
+			<search position="after"><![CDATA[$_['heading_title']                  = 'Checkout';]]></search>
+			<add><![CDATA[$_['text_yousave']                = 'You Save';
+			]]></add>
+		</operation>
+	</file>
+	
+<!-- Send Yousave to confirm checkout controller -->
+	<file name="catalog/controller/checkout/confirm.php">
+		
+<!-- get yousave text-->
+		<operation>
+			<search position="after"><![CDATA[$this->load->language('checkout/checkout');]]></search>
+			<add><![CDATA[$data['text_yousave'] = $this->language->get('text_yousave');]]></add>
+		</operation>
+		
+<!-- get yousavetotal value-->				
+		<operation>
+			<search position="before"><![CDATA['tax'        => $this->tax->getTax($product['price'], $product['tax_class_id']),]]></search>
+			<add><![CDATA['yousavetotal'      => $product['yousavetotal'],]]></add>
+		</operation>
+
+<!-- get Totalyousave value for storing in order table-->				
+		<operation>
+			<search position="before"><![CDATA[$this->session->data['order_id'] = $this->model_checkout_order->addOrder($order_data);]]></search>
+			<add><![CDATA[$order_data['totalyousave'] = $this->cart->getTotalYousave();]]></add>
+		</operation>
+		
+<!-- get Totalyousave value for confirm-->
+		<operation>
+			<search position="after"><![CDATA[$data['totals'] = array();]]></search>
+			<add><![CDATA[$data['TotalYousave'] = $this->currency->format($this->cart->getTotalYousave());]]></add>
+		</operation>
+				
+	</file>
+
+<!-- Show TotalYousave to confirm checkout view -->
+	<file name="catalog/view/theme/*/template/checkout/confirm.tpl">
+		
+<!-- Show Totalyousave value-->				
+		<operation>
+			<search position="before"><![CDATA[</tfoot>]]></search>
+			<add><![CDATA[<tr><td colspan="4" class="text-right"><strong><?php echo $text_yousave; ?></strong></td>
+					<td class="text-right"><?php echo $TotalYousave; ?></td></tr>]]></add>
+		</operation>
+				
+	</file>	
+	
+	
+<!-- For Admin Account Order Page-->
+		
+<!-- Showing You save Total on User account view -->
+	<file name="catalog/language/english/account/order.php">
+		<operation>
+			<search position="after"><![CDATA[$_['heading_title']         = 'Order History';]]></search>
+			<add><![CDATA[$_['text_yousavetotal']                = 'Total You Save : ';
+			]]></add>
+		</operation>
+	</file>
+			
+	<file name="catalog/model/checkout/order.php">
+	<!-- Send Yousavetotal to Order product table -->		
+		<operation>
+			<search position="replace" index="1"><![CDATA[reward = '" . (int)$product['reward'] . "']]></search>
+			<add><![CDATA[reward = '" . (int)$product['reward'] . "', yousavetotal = '" . $product['yousavetotal'] . "']]></add>
+		</operation>
+				
+	<!-- Send TotalYousave to Order table -->
+		<operation>
+			<search position="replace"><![CDATA[date_added = NOW(), date_modified = NOW()]]></search>
+			<add><![CDATA[date_added = NOW(), date_modified = NOW(), totalyousave = '" . $data['totalyousave'] . "']]></add>
+		</operation>
+
+	</file>
+
+<!-- Get Totalyousave from Order table to show on order history -->
+	<file name="catalog/model/account/order.php">
+		<operation>
+			<search position="before"><![CDATA[public function getTotalOrderVouchersByOrderId($order_id) {]]></search>
+			<add><![CDATA[public function getTotalyousave() {
+		$query = $this->db->query("SELECT SUM(totalyousave) AS Totalyousave FROM `" . DB_PREFIX . "order` WHERE customer_id = '" . (int)$this->customer->getId() . "'");
+
+		return $query->row['Totalyousave'];
+	}]]></add>
+		</operation>
+	</file>
+	
+<!-- Get Totalyousave on account order controller -->
+	<file name="catalog/controller/account/order.php">
+		<operation>
+			<search position="after" index="1"><![CDATA[$this->load->model('account/order');]]></search>
+			<add><![CDATA[$data['text_yousavetotal'] = $this->language->get('text_yousavetotal');
+			$data['totalyousave'] = $this->currency->format($this->model_account_order->getTotalyousave());]]></add>
+		</operation>
+	</file>
+	
+<!-- Show Totalyousave on account order history page -->
+	<file name="catalog/view/theme/*/template/account/order_list.tpl">
+		<operation>
+			<search position="after"><![CDATA[<h1><?php echo $heading_title; ?></h1>]]></search>
+			<add><![CDATA[<table class="table table-bordered table-hover">
+			<tr><td class="text-right"><strong><?php echo $text_yousavetotal; ?></strong></td>
+			<td><?php echo $totalyousave; ?></td></tr></table>]]></add>
+		</operation>
+	</file>-->
+							
+</modification>
